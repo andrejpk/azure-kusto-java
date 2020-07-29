@@ -45,7 +45,7 @@ mvn clean compile exec:java -Dexec.mainClass="Query" \
                             -DclusterPath="cluster/path" \
                             -DappId="app-id" \
                             -DappKey="appKey" \
-                            -DappTenant="subscription-id" \
+                            -DappTenant="tenant-id" \
                             -DdbName="dbName" \
                             -Dquery="your | query"
 
