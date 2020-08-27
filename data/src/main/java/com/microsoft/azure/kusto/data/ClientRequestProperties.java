@@ -21,11 +21,11 @@ import java.util.Iterator;
 public class ClientRequestProperties {
     private static final String OPTIONS_KEY = "Options";
     private static final String PARAMETERS_KEY = "Parameters";
-    private static final String OPTION_SERVER_TIMEOUT = "servertimeout";
+    public static final String OPTION_SERVER_TIMEOUT = "servertimeout";
+    public static final String OPTION_CLIENT_REQUEST_ID = "ClientRequestId";
     private static final long NANOS_TO_MILLIS = 1000000L;
     private HashMap<String, Object> parameters;
     private HashMap<String, Object> options;
-
     public ClientRequestProperties() {
         parameters = new HashMap<>();
         options = new HashMap<>();
@@ -129,6 +129,14 @@ public class ClientRequestProperties {
         }
 
         return null;
+    }
+
+    public String getClientRequestId() {
+        return (String) getOption(OPTION_CLIENT_REQUEST_ID);
+    }
+
+    public void setClientRequestId(String clientRequestId) {
+        setOption(OPTION_CLIENT_REQUEST_ID, clientRequestId);
     }
 
     Iterator<HashMap.Entry<String, Object>> getOptions() {

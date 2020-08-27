@@ -21,7 +21,8 @@ public class ClientImpl implements Client, StreamingClient {
     private static final String MGMT_ENDPOINT_VERSION = "v1";
     private static final String QUERY_ENDPOINT_VERSION = "v2";
     private static final String STREAMING_VERSION = "v1";
-    private static final String DEFAULT_DATABASE_NAME = "NetDefaultDb";
+    public static final String DEFAULT_DATABASE_NAME = "NetDefaultDb";
+
     private static final Long COMMAND_TIMEOUT_IN_MILLISECS = TimeUnit.MINUTES.toMillis(10) + TimeUnit.SECONDS.toMillis(30);
     private static final Long QUERY_TIMEOUT_IN_MILLISECS = TimeUnit.MINUTES.toMillis(4) + TimeUnit.SECONDS.toMillis(30);
     private static final Long STREAMING_INGEST_TIMEOUT_IN_MILLISECS = TimeUnit.MINUTES.toMillis(10);
@@ -77,6 +78,7 @@ public class ClientImpl implements Client, StreamingClient {
             }
         }
 
+        String clientRequestId = null;
         String jsonString;
         try {
             JSONObject json = new JSONObject()
@@ -85,6 +87,7 @@ public class ClientImpl implements Client, StreamingClient {
 
             if (properties != null) {
                 json.put("properties", properties.toString());
+                clientRequestId = properties.getClientRequestId();
             }
 
             jsonString = json.toString();
@@ -94,7 +97,7 @@ public class ClientImpl implements Client, StreamingClient {
 
         HashMap<String, String> headers = initHeaders();
         headers.put("Content-Type", "application/json");
-        headers.put("x-ms-client-request-id", String.format("KJC.execute;%s", java.util.UUID.randomUUID()));
+        headers.put("x-ms-client-request-id", clientRequestId == null ? String.format("KJC.execute;%s", java.util.UUID.randomUUID()) : clientRequestId);
         headers.put("Fed", "True");
 
         return Utils.post(clusterEndpoint, jsonString, null, timeoutMs.intValue() + CLIENT_SERVER_DELTA_IN_MILLISECS, headers, false);

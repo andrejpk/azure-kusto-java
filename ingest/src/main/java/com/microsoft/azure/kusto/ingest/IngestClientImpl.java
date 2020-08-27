@@ -34,11 +34,15 @@ class IngestClientImpl implements IngestClient {
     private final ResourceManager resourceManager;
     private AzureStorageClient azureStorageClient;
 
-    IngestClientImpl(ConnectionStringBuilder csb) throws URISyntaxException {
+    IngestClientImpl(ConnectionStringBuilder csb, String requestIdPrefix) throws URISyntaxException {
         log.info("Creating a new IngestClient");
         Client client = ClientFactory.createClient(csb);
-        this.resourceManager = new ResourceManager(client);
+        this.resourceManager = new ResourceManager(client, requestIdPrefix);
         this.azureStorageClient = new AzureStorageClient();
+    }
+
+    IngestClientImpl(ConnectionStringBuilder csb) throws URISyntaxException {
+        this(csb, null);
     }
 
     IngestClientImpl(ResourceManager resourceManager) {

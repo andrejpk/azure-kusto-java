@@ -3,9 +3,7 @@
 
 package com.microsoft.azure.kusto.ingest;
 
-import com.microsoft.azure.kusto.data.Client;
-import com.microsoft.azure.kusto.data.KustoOperationResult;
-import com.microsoft.azure.kusto.data.KustoResultSetTable;
+import com.microsoft.azure.kusto.data.*;
 import com.microsoft.azure.kusto.data.exceptions.DataClientException;
 import com.microsoft.azure.kusto.data.exceptions.DataServiceException;
 import com.microsoft.azure.kusto.ingest.exceptions.IngestionClientException;
@@ -59,25 +57,35 @@ class ResourceManager implements Closeable {
     private String identityToken;
 
     private Client client;
+    private String requestIdPrefix;
     private final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
     private final Timer timer;
     private ReadWriteLock ingestionResourcesLock = new ReentrantReadWriteLock();
     private ReadWriteLock authTokenLock = new ReentrantReadWriteLock();
     private static final long REFRESH_INGESTION_RESOURCES_PERIOD = 1000 * 60 * 60; // 1 hour
     private static final long REFRESH_INGESTION_RESOURCES_PERIOD_ON_FAILURE = 1000 * 60 * 15; // 15 minutes
-    private Long defaultRefreshTime;
-    private Long refreshTimeOnFailure;
+    private final Long defaultRefreshTime;
+    private final Long refreshTimeOnFailure;
 
     ResourceManager(Client client, long defaultRefreshTime, long refreshTimeOnFailure) {
-        this.defaultRefreshTime = defaultRefreshTime;
-        this.refreshTimeOnFailure = refreshTimeOnFailure;
-        this.client = client;
-        timer = new Timer(true);
-        init();
+      this(client,defaultRefreshTime,refreshTimeOnFailure, null);
+    }
+
+    ResourceManager(Client client, String requestIdPrefix) {
+        this(client, REFRESH_INGESTION_RESOURCES_PERIOD, REFRESH_INGESTION_RESOURCES_PERIOD_ON_FAILURE, requestIdPrefix);
     }
 
     ResourceManager(Client client) {
-        this(client, REFRESH_INGESTION_RESOURCES_PERIOD, REFRESH_INGESTION_RESOURCES_PERIOD_ON_FAILURE);
+        this(client, null);
+    }
+
+    ResourceManager(Client client, long defaultRefreshTime, long refreshTimeOnFailure, String requestIdPrefix) {
+        this.defaultRefreshTime = defaultRefreshTime;
+        this.refreshTimeOnFailure = refreshTimeOnFailure;
+        this.client = client;
+        this.requestIdPrefix = requestIdPrefix;
+        timer = new Timer(true);
+        init();
     }
 
     @Override
@@ -165,7 +173,9 @@ class ResourceManager implements Closeable {
         if (ingestionResourcesLock.writeLock().tryLock()) {
             try {
                 log.info("Refreshing Ingestion Resources");
-                KustoOperationResult ingestionResourcesResults  = client.execute(Commands.INGESTION_RESOURCES_SHOW_COMMAND);
+                ClientRequestProperties crp = new ClientRequestProperties();
+                crp.setClientRequestId(String.format("%s;%s", requestIdPrefix,java.util.UUID.randomUUID()));
+                KustoOperationResult ingestionResourcesResults  = client.execute(ClientImpl.DEFAULT_DATABASE_NAME, Commands.INGESTION_RESOURCES_SHOW_COMMAND, crp);
                 if (ingestionResourcesResults != null && ingestionResourcesResults.hasNext()) {
                     HashMap<ResourceType, IngestionResource> newIngestionResources = new HashMap<>();
                     KustoResultSetTable table = ingestionResourcesResults.next();
@@ -208,7 +218,9 @@ class ResourceManager implements Closeable {
         if (authTokenLock.writeLock().tryLock()) {
             try {
                 log.info("Refreshing Ingestion Auth Token");
-                KustoOperationResult identityTokenResult = client.execute(Commands.IDENTITY_GET_COMMAND);
+                ClientRequestProperties crp = new ClientRequestProperties();
+                crp.setClientRequestId(String.format("%s;%s", requestIdPrefix,java.util.UUID.randomUUID()));
+                KustoOperationResult identityTokenResult = client.execute(ClientImpl.DEFAULT_DATABASE_NAME,Commands.IDENTITY_GET_COMMAND, crp);
                 if (identityTokenResult != null
                         && identityTokenResult.hasNext()
                         && identityTokenResult.getResultTables().size() > 0) {
